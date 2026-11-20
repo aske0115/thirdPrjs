@@ -1,0 +1,2 @@
+# Cute Animated Monsters
+Creator: Quaternius. Official page https://quaternius.com/packs/cutemonsters.html states CC0 and permits commercial use. Files downloaded from community glTF mirror https://github.com/agentkaerf/FreeModels/tree/main/Cute%20Animated%20Monsters%20-%20Aug%202020/glTF; geometry, textures and animations embedded within each glTF. License: https://creativecommons.org/publicdomain/zero/1.0/.

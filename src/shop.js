@@ -8,6 +8,8 @@ export function createShop(THREE, scene) {
   const base = import.meta.env.BASE_URL;
   let disposed = false, time = 0, celebration = 0;
   const customers = [], mixers = [];
+  const visitor = { object:null, mixer:null, action:null, clips:[], phase:"enter", wait:0, baseY:0 };
+  let displayCount = 0; const displayItems = [];
   const mats = new Map();
   const material = color => {
     if (!mats.has(color)) mats.set(color, new THREE.MeshStandardMaterial({color, roughness: 0.86}));
@@ -18,7 +20,7 @@ export function createShop(THREE, scene) {
     mesh.position.set(x,y,z); mesh.rotation.y=rot; mesh.castShadow=true; mesh.receiveShadow=true; root.add(mesh); return mesh;
   }
   function ball(x,y,z,r,color){const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,8),material(color));m.position.set(x,y,z);root.add(m);return m;}
-  function model(path,x,y,z,height,rotation=0, customer=false) {
+  function model(path,x,y,z,height,rotation=0, customer=false, onReady=null) {
     loader.load(`${base}assets/models/${path}.glb`, gltf => {
       if (disposed) { gltf.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of [].concat(o.material))m.dispose();}}); return; }
       const object=gltf.scene;
@@ -26,7 +28,7 @@ export function createShop(THREE, scene) {
       object.scale.setScalar(height/Math.max(size.y,0.001));
       const bounds=new THREE.Box3().setFromObject(object); object.position.set(x,y-bounds.min.y,z); object.rotation.y=rotation;
       object.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
-      root.add(object); if(gltf.animations.length){const mixer=new THREE.AnimationMixer(object);const clip=gltf.animations.find(c=>/idle/i.test(c.name))||gltf.animations[0];mixer.clipAction(clip).play();mixers.push(mixer);} if(customer)customers.push({object, baseY:object.position.y, phase:customers.length*1.8});
+      root.add(object); let mixer=null; if(gltf.animations.length){mixer=new THREE.AnimationMixer(object);const clip=gltf.animations.find(c=>/idle/i.test(c.name))||gltf.animations[0];mixer.clipAction(clip).play();mixers.push(mixer);} if(customer)customers.push({object, baseY:object.position.y, phase:customers.length*1.8}); if(onReady)onReady(object,mixer,gltf.animations);
     }, undefined, err => console.warn('Shop model unavailable:', path, err));
   }
   // Platform, warm wood planks and mint checker floor.
@@ -55,18 +57,45 @@ export function createShop(THREE, scene) {
   box(-4.57,2.5,1.6,.08,1.08,.08,'#f6e1bf');box(-4.57,2.5,1.6,.08,.08,1.95,'#f6e1bf');
   for(let x=-4;x<=4;x+=2){ball(x,3.4,-3.4,.1,'#ffe4a2');}
   model('food/apple',1.35,1.04,-.55,.4); model('food/cupcake',2,1.04,-.55,.46); model('food/burger-double',2.68,1.04,-.55,.37);
-  model('nature/mushroom_redTall',1.5,.79,2.4,.48);model('nature/mushroom_redTall',2.1,.79,2.4,.36);model('food/apple',2.6,.79,2.4,.31);
+  for(let i=0;i<5;i++) model('nature/mushroom_redTall',1.25+i*.36,.79,2.4,.34,0,false,(object)=>{displayItems[i]=object; object.visible=i<displayCount;});
   model('mini-shop/character-employee',-2.6,.08,-.9,1.45,Math.PI,true);
-  model('chars/character-female-c',-2.4,.08,1.95,1.35,Math.PI,true);
+  model('mini-characters/character-female-d',3.8,.08,4.3,1.35,Math.PI,false,(object,mixer,clips)=>{visitor.object=object;visitor.mixer=mixer;visitor.clips=clips;visitor.baseY=object.position.y;visitor.action=mixer?.clipAction(clips.find(c=>/idle/i.test(c.name))||clips[0]);});
   model('mini-shop/display-bread',3.65,.08,.95,1.0); model('mini-shop/display-fruit',.05,.08,-1.0,.95);
   model('mini-shop/shopping-basket',-.6,.08,2.2,.4); model('mini-shop/shopping-cart',-3.7,.08,2.8,.9);
   model('town/tree-high-round',4.25,.05,3.3,1.9);
   model('nature/flower_yellowA',-4,.05,3.3,.55);
   const ambient=new THREE.HemisphereLight('#e8fbff','#9a7569',2.1);root.add(ambient);
   const sun=new THREE.DirectionalLight('#fff0ce',2.2);sun.position.set(3,8,5);root.add(sun);
+  function animateVisitor(name) {
+    if(!visitor.mixer)return;
+    const clip=visitor.clips.find(c=>c.name===name);if(!clip)return;
+    const next=visitor.mixer.clipAction(clip);if(next===visitor.action)return;
+    if(visitor.action)visitor.action.fadeOut(.18);
+    next.reset().fadeIn(.18).play();visitor.action=next;
+  }
+  function moveVisitor(x,z,dt,next) {
+    const object=visitor.object, dx=x-object.position.x, dz=z-object.position.z;
+    const distance=Math.hypot(dx,dz), step=1.35*dt;
+    if(distance<=step){object.position.x=x;object.position.z=z;visitor.phase=next;visitor.wait=0;animateVisitor('idle');return;}
+    object.position.x+=dx/distance*step;object.position.z+=dz/distance*step;
+    object.rotation.y=Math.atan2(dx,dz);animateVisitor('walk');
+  }
+  function updateVisitor(dt){
+    if(!visitor.object)return;
+    switch(visitor.phase){
+      case 'enter': moveVisitor(2.9,1.35,dt,'browse');break;
+      case 'browse': visitor.wait+=dt;visitor.object.rotation.y=Math.PI; if(visitor.wait>2.4)visitor.phase='checkout';break;
+      case 'checkout': moveVisitor(-1.4,1.85,dt,'wait');break;
+      case 'wait': visitor.wait+=dt;visitor.object.rotation.y=-Math.PI/2; if(visitor.wait>9) {visitor.phase='exit';visitor.wait=0;} break;
+      case 'happy': visitor.wait+=dt;visitor.object.position.y=visitor.baseY+Math.abs(Math.sin(visitor.wait*11))*.13;if(visitor.wait>1.25){visitor.object.position.y=visitor.baseY;visitor.phase='exit';}break;
+      case 'exit': moveVisitor(3.8,4.3,dt,'away');break;
+      case 'away': visitor.wait+=dt;visitor.object.visible=false;if(visitor.wait>1.8){visitor.object.visible=true;visitor.phase='enter';visitor.wait=0;}break;
+    }
+  }
   return {
-    update(dt){ mixers.forEach(m=>m.update(Math.min(dt||0,.1))); time += Math.min(dt||0,.1);celebration=Math.max(0,celebration-(dt||0));customers.forEach(c=>{c.object.position.y=c.baseY+Math.sin(time*2+c.phase)*.025+(celebration>0?Math.abs(Math.sin(celebration*12))*.14:0);}); },
-    sell(){celebration=.8;},
+    update(dt){ dt=Math.min(dt||0,.1);mixers.forEach(m=>m.update(dt));time+=dt;celebration=Math.max(0,celebration-dt);customers.forEach(c=>{c.object.position.y=c.baseY+Math.sin(time*2+c.phase)*.025+(celebration>0?Math.abs(Math.sin(celebration*12))*.14:0);});updateVisitor(dt); },
+    sell(){celebration=.8;if(visitor.object && visitor.phase!=='away'){visitor.phase='happy';visitor.wait=0;animateVisitor('emote-yes');}},
+    setDisplay(count){displayCount=Math.max(0,Math.floor(Number(count)||0));displayItems.forEach((item,i)=>item.visible=i<displayCount);},
     dispose(){disposed=true;scene.remove(root);root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of [].concat(o.material)){if(m.map)m.map.dispose();m.dispose();}}});}
   };
 }
