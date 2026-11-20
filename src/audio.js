@@ -81,10 +81,11 @@ export function createAudio() {
         case 'hit': noise(now, 0.055, 0.42, 2400); tone(now, 560, 0.07, 'triangle', 0.35, 220); tone(now, 1100, 0.035, 'square', 0.08, 700); break;
         case 'kill': noise(now, 0.075, 0.30, 1800); tone(now, 480, 0.09, 'triangle', 0.28, 700); tone(now + 0.06, 880, 0.16, 'sine', 0.24, 1100); break;
         case 'skill': noise(now, 0.14, 0.25, 3000); tone(now, 380, 0.18, 'sawtooth', 0.10, 760); tone(now + 0.08, 850, 0.15, 'sine', 0.17, 1200); break;
+        case 'sauce': noise(now, 0.12, 0.30, 1550); tone(now, 420, 0.12, 'triangle', 0.24, 180); tone(now + 0.06, 760, 0.12, 'sine', 0.13, 410); break;
         case 'hurt': tone(now, 250, 0.16, 'triangle', 0.28, 110); break;
         case 'collect': tone(now, 880, 0.07, 'triangle', 0.20, 1150); tone(now + 0.05, 1320, 0.12, 'sine', 0.14); break;
         case 'shop': tone(now, 520, 0.1, 'triangle', 0.19); tone(now + 0.09, 780, 0.16, 'sine', 0.18); break;
-        case 'sale': tone(now, 880, 0.09, 'sine', 0.2); tone(now + 0.07, 1175, 0.2, 'sine', 0.19); break;
+        case 'sale': tone(now, 740, 0.09, 'triangle', 0.19, 900); tone(now + 0.07, 1109, 0.19, 'sine', 0.20); tone(now + 0.14, 1480, 0.17, 'sine', 0.11); break;
         case 'quest': tone(now, 523, 0.12, 'triangle', 0.2); tone(now + 0.1, 659, 0.12, 'triangle', 0.2); tone(now + 0.2, 784, 0.24, 'sine', 0.22); break;
         case 'return': tone(now, 659, 0.12, 'sine', 0.18); tone(now + 0.1, 523, 0.2, 'sine', 0.18); break;
       }

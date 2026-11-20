@@ -10,6 +10,13 @@ export function createShop(THREE, scene) {
   const customers = [], mixers = [];
   const visitor = { object:null, mixer:null, action:null, clips:[], phase:"enter", wait:0, baseY:0 };
   let displayCount = 0; const displayItems = [];
+  let bubblePhase = '';
+  const bubbleCanvas=document.createElement('canvas');bubbleCanvas.width=512;bubbleCanvas.height=160;
+  const bubbleCtx=bubbleCanvas.getContext('2d');
+  const bubbleTexture=new THREE.CanvasTexture(bubbleCanvas);bubbleTexture.colorSpace=THREE.SRGBColorSpace;
+  const bubble=new THREE.Sprite(new THREE.SpriteMaterial({map:bubbleTexture,transparent:true,depthTest:false}));
+  bubble.scale.set(2.65,.83,1);bubble.renderOrder=20;bubble.visible=false;root.add(bubble);
+  function say(text){bubbleCtx.clearRect(0,0,512,160);bubbleCtx.fillStyle='rgba(255,253,243,.96)';bubbleCtx.beginPath();bubbleCtx.roundRect(5,5,502,128,48);bubbleCtx.fill();bubbleCtx.fillStyle='#533f36';bubbleCtx.font='bold 37px sans-serif';bubbleCtx.textAlign='center';bubbleCtx.textBaseline='middle';bubbleCtx.fillText(text,256,72);bubbleTexture.needsUpdate=true;}
   const mats = new Map();
   const material = color => {
     if (!mats.has(color)) mats.set(color, new THREE.MeshStandardMaterial({color, roughness: 0.86}));
@@ -86,16 +93,22 @@ export function createShop(THREE, scene) {
       case 'enter': moveVisitor(2.9,1.35,dt,'browse');break;
       case 'browse': visitor.wait+=dt;visitor.object.rotation.y=Math.PI; if(visitor.wait>2.4)visitor.phase='checkout';break;
       case 'checkout': moveVisitor(-1.4,1.85,dt,'wait');break;
-      case 'wait': visitor.wait+=dt;visitor.object.rotation.y=-Math.PI/2; if(visitor.wait>9) {visitor.phase='exit';visitor.wait=0;} break;
+      case 'wait': visitor.wait+=dt;visitor.object.rotation.y=-Math.PI/2; break;
       case 'happy': visitor.wait+=dt;visitor.object.position.y=visitor.baseY+Math.abs(Math.sin(visitor.wait*11))*.13;if(visitor.wait>1.25){visitor.object.position.y=visitor.baseY;visitor.phase='exit';}break;
       case 'exit': moveVisitor(3.8,4.3,dt,'away');break;
       case 'away': visitor.wait+=dt;visitor.object.visible=false;if(visitor.wait>1.8){visitor.object.visible=true;visitor.phase='enter';visitor.wait=0;}break;
     }
+    const phrase=visitor.phase==='browse'?'이건 어떤 맛일까?':visitor.phase==='wait'?'버섯을 살 수 있을까요?':visitor.phase==='happy'?'고마워요! ✨':'';
+    bubble.visible=!!phrase && visitor.object.visible;
+    if(phrase && bubblePhase!==phrase){say(phrase);bubblePhase=phrase;}
+    bubble.position.set(visitor.object.position.x,visitor.object.position.y+2.0,visitor.object.position.z);
   }
   return {
     update(dt){ dt=Math.min(dt||0,.1);mixers.forEach(m=>m.update(dt));time+=dt;celebration=Math.max(0,celebration-dt);customers.forEach(c=>{c.object.position.y=c.baseY+Math.sin(time*2+c.phase)*.025+(celebration>0?Math.abs(Math.sin(celebration*12))*.14:0);});updateVisitor(dt); },
-    sell(){celebration=.8;if(visitor.object && visitor.phase!=='away'){visitor.phase='happy';visitor.wait=0;animateVisitor('emote-yes');}},
+    sell(){if(!visitor.object || visitor.phase!=='wait')return false;celebration=.8;visitor.phase='happy';visitor.wait=0;animateVisitor('emote-yes');return true;},
+    canSell(){return !!visitor.object && visitor.phase==='wait';},
+    getCustomerState(){return visitor.phase;},
     setDisplay(count){displayCount=Math.max(0,Math.floor(Number(count)||0));displayItems.forEach((item,i)=>item.visible=i<displayCount);},
-    dispose(){disposed=true;scene.remove(root);root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of [].concat(o.material)){if(m.map)m.map.dispose();m.dispose();}}});}
+    dispose(){disposed=true;bubbleTexture.dispose();scene.remove(root);root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of [].concat(o.material)){if(m.map)m.map.dispose();m.dispose();}}});}
   };
 }
