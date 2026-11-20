@@ -2,3 +2,5 @@
 .bubble{position:absolute;top:calc(max(12px,env(safe-area-inset-top)) + 52px);left:14px;right:14px;max-width:340px}
 #skills{pointer-events:auto}
 .combat-row{display:flex;align-items:end;gap:10px;pointer-events:auto}
+.move-zone{position:absolute;left:0;top:28%;width:48%;bottom:0;pointer-events:auto;touch-action:none;z-index:2;user-select:none;-webkit-user-select:none}.controls{pointer-events:none}.fight-buttons{pointer-events:auto;position:relative;z-index:3}.stick{pointer-events:none;opacity:.45}.stick.floating-active{position:fixed;transform:translate(-50%,-50%);z-index:4;opacity:1}.skill-btn{width:55px;height:55px;background:#8366bf;box-shadow:0 4px 0 #584185;font-size:12px}.combat-row{gap:7px}#ui{touch-action:none;-webkit-user-select:none;user-select:none}#skills,.top-actions{position:relative;z-index:5}
+.fight-buttons{margin-left:auto;flex-shrink:0}
