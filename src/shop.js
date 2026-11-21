@@ -1,10 +1,14 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { addMoonBonnet } from './character-style.js';
+import { addMoonBonnet, updateMoonCostume } from './character-style.js';
 import { createShopScenery } from './shop/scenery.js';
 
 // A small isometric shop diorama. UI, renderer, camera and inventory belong to the shell.
 export function createShop(THREE, scene) {
   const root = new THREE.Group();
+  // Portrait-first staging: the shop is a long, explorable room, not a tiny
+  // tabletop diorama. Stretching its depth creates the layered composition of
+  // a real mobile RPG interior while every shelf and actor remains geometry.
+  root.scale.set(.9,1,1.5);
   scene.add(root);
   const scenery=createShopScenery(THREE,root);
   const loader = new GLTFLoader();
@@ -12,7 +16,7 @@ export function createShop(THREE, scene) {
   let disposed = false, time = 0, celebration = 0;
   const customers = [], mixers = [];
   const visitor = { object:null, mixer:null, action:null, clips:[], phase:"enter", wait:0, baseY:0 };
-  let displayCount = 0; const displayItems = [];
+  let displayCount = 0; const displayItems = [];let playerModel=null;
   let bubblePhase = '';
   const bubbleCanvas=document.createElement('canvas');bubbleCanvas.width=512;bubbleCanvas.height=160;
   const bubbleCtx=bubbleCanvas.getContext('2d');
@@ -60,7 +64,7 @@ export function createShop(THREE, scene) {
   const fallback=new THREE.Group();player.add(fallback);const body=new THREE.Mesh(new THREE.SphereGeometry(.37,12,8),material('#8fb49c'));body.position.y=.62;body.scale.set(1,1.25,.8);fallback.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(.28,12,8),material('#ffd6b6'));head.position.y=1.25;fallback.add(head);
   const stick=new THREE.Vector2();let playerMixer=null,playerActions={},playerAction='';
   function animatePlayer(name){const next=playerActions[name];if(!next||playerAction===name)return;playerActions[playerAction]?.fadeOut(.15);next.reset().fadeIn(.15).play();playerAction=name;}
-  model('quaternius-adventurer/Adventurer.gltf',0,0,0,1.6,0,false,(object,mixer,clips)=>{const y=object.position.y;player.add(object);object.position.set(0,y,0);addMoonBonnet(THREE,object,1.6);fallback.visible=false;playerMixer=mixer;for(const clip of clips)playerActions[clip.name]=mixer.clipAction(clip);animatePlayer('Idle');});
+  model('quaternius-adventurer/Adventurer.gltf',0,0,0,1.6,0,false,(object,mixer,clips)=>{const y=object.position.y;player.add(object);object.position.set(0,y,0);addMoonBonnet(THREE,object,1.6);playerModel=object;fallback.visible=false;playerMixer=mixer;for(const clip of clips)playerActions[clip.name]=mixer.clipAction(clip);animatePlayer('Idle');});
   function walkable(x,z){if(x< -4.45||x>4.45||z< -3.3||z>3.7)return false;const counters=[[-4.0,-1.0,-.55,.95],[.55,3.45,-1.25,.35],[.65,3.35,1.75,3.05]];return !counters.some(([x1,x2,z1,z2])=>x>x1&&x<x2&&z>z1&&z<z2)}
   function stepPlayer(dt){const x=stick.x*.84+stick.y*.54,z=-stick.x*.54+stick.y*.84,speed=2.7,nx=player.position.x+x*speed*dt,nz=player.position.z+z*speed*dt;if(walkable(nx,player.position.z))player.position.x=nx;if(walkable(player.position.x,nz))player.position.z=nz;if(Math.hypot(x,z)>.05){const a=Math.atan2(x,z),delta=Math.atan2(Math.sin(a-player.rotation.y),Math.cos(a-player.rotation.y));player.rotation.y+=delta*Math.min(1,dt*14);animatePlayer('Run')}else animatePlayer('Idle')}
   function nearby(){const p=player.position;if(visitor.phase==='wait'&&visitor.object&&Math.hypot(p.x-visitor.object.position.x,p.z-visitor.object.position.z)<1.55)return 'customer';if(Math.hypot(p.x-2,p.z-2.4)<1.8)return 'display';if(Math.hypot(p.x+2.5,p.z-.2)<1.85)return 'counter';if(p.z>3.12&&Math.abs(p.x)<1.15)return 'exit';return null}
@@ -97,7 +101,7 @@ export function createShop(THREE, scene) {
     bubble.position.set(visitor.object.position.x,visitor.object.position.y+2.0,visitor.object.position.z);
   }
   return {
-    update(dt){ dt=Math.min(dt||0,.1);scenery.update(dt);stepPlayer(dt);mixers.forEach(m=>m.update(dt));time+=dt;celebration=Math.max(0,celebration-dt);customers.forEach(c=>{c.object.position.y=c.baseY+Math.sin(time*2+c.phase)*.025+(celebration>0?Math.abs(Math.sin(celebration*12))*.14:0);});updateVisitor(dt); },
+    update(dt){ dt=Math.min(dt||0,.1);scenery.update(dt);stepPlayer(dt);mixers.forEach(m=>m.update(dt));time+=dt;updateMoonCostume(playerModel,time);celebration=Math.max(0,celebration-dt);customers.forEach(c=>{c.object.position.y=c.baseY+Math.sin(time*2+c.phase)*.025+(celebration>0?Math.abs(Math.sin(celebration*12))*.14:0);});updateVisitor(dt); },
     sell(){if(!visitor.object || visitor.phase!=='wait')return false;celebration=.8;visitor.phase='happy';visitor.wait=0;animateVisitor('emote-yes');return true;},
     canSell(){return !!visitor.object && visitor.phase==='wait';},
     getCustomerState(){return visitor.phase;},
