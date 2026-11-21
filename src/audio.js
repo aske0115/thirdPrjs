@@ -73,12 +73,17 @@ export function createAudio() {
   function play(name) {
     if (muted || !context || context.state !== 'running') return;
     const now = context.currentTime;
-    const cooldown = name === 'hit' ? 0.09 : name === 'collect' ? 0.07 : 0.04;
-    if (now - (lastPlayed.get(name) ?? -Infinity) < cooldown) return;
-    lastPlayed.set(name, now);
+    const hitNames = ['hit', 'meleeHit', 'rangedHit', 'bossHit'];
+    const group = hitNames.includes(name) ? 'impact' : name;
+    const cooldown = group === 'impact' ? 0.09 : name === 'collect' ? 0.07 : 0.04;
+    if (now - (lastPlayed.get(group) ?? -Infinity) < cooldown) return;
+    lastPlayed.set(group, now);
     try {
       switch (name) {
         case 'hit': noise(now, 0.055, 0.42, 2400); tone(now, 560, 0.07, 'triangle', 0.35, 220); tone(now, 1100, 0.035, 'square', 0.08, 700); break;
+        case 'meleeHit': noise(now, 0.07, 0.4, 1900); tone(now, 620, 0.1, 'triangle', 0.32, 210); tone(now, 1350, 0.045, 'square', 0.07, 750); break;
+        case 'rangedHit': tone(now, 1200, 0.065, 'triangle', 0.28, 780); noise(now, 0.035, 0.22, 3200); tone(now + 0.025, 1650, 0.09, 'sine', 0.11, 1250); break;
+        case 'bossHit': noise(now, 0.11, 0.44, 1450); tone(now, 480, 0.14, 'triangle', 0.34, 160); tone(now + 0.02, 850, 0.12, 'square', 0.09, 500); break;
         case 'kill': noise(now, 0.075, 0.30, 1800); tone(now, 480, 0.09, 'triangle', 0.28, 700); tone(now + 0.06, 880, 0.16, 'sine', 0.24, 1100); break;
         case 'skill': noise(now, 0.14, 0.25, 3000); tone(now, 380, 0.18, 'sawtooth', 0.10, 760); tone(now + 0.08, 850, 0.15, 'sine', 0.17, 1200); break;
         case 'sauce': noise(now, 0.12, 0.30, 1550); tone(now, 420, 0.12, 'triangle', 0.24, 180); tone(now + 0.06, 760, 0.12, 'sine', 0.13, 410); break;

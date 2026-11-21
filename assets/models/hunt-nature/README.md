@@ -1,0 +1,1 @@
+Kenney Nature Kit (https://kenney.nl/assets/nature-kit), CC0 1.0, commercial use permitted. Original license provided. GLB files from https://github.com/Hidencod/tge-assets/tree/main/packs/nature-kit (community mirror, textures embedded); the mirror files are derived from the original Kenney pack.

@@ -1,0 +1,2 @@
+# Adventurer — Ultimate Modular Women Pack
+Author Quaternius. Original: https://quaternius.com/packs/ultimatemodularwomen.html. Official page lists CC0 1.0 and commercial use allowed. Source glTF from community mirror https://github.com/agentkaerf/FreeModels/tree/main/Ultimate%20Modular%20Women%20-%20April%202022/Individual%20Characters/glTF. Original glTF embeds model, textures and animations. License: https://creativecommons.org/publicdomain/zero/1.0/.
