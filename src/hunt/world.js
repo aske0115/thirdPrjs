@@ -8,8 +8,8 @@ export function createWorld(THREE, scene) {
   let disposed=false, elapsed=0;
   const base=import.meta.env.BASE_URL;
   function mat(color,extra={}){const m=new THREE.MeshStandardMaterial({color,roughness:.9,...extra});materials.push(m);return m;}
-  const turf=mat('#688565'), dirt=mat('#a18563'), rock=mat('#777f76'), rockLight=mat('#a3a59a'), wood=mat('#684638'), plank=mat('#a97b52'), moss=mat('#708c64'), mushroom=mat('#d98768'), cream=mat('#f5dbc2');
-  const water=mat('#72afa8',{roughness:.34,metalness:.03,transparent:true,opacity:.88});
+  const turf=mat('#354b4d'), dirt=mat('#635a66'), rock=mat('#44495c'), rockLight=mat('#73758a'), wood=mat('#514046'), plank=mat('#98704f'), moss=mat('#516962'), mushroom=mat('#9061ae',{emissive:'#301038',emissiveIntensity:.22}), cream=mat('#d4c8ca');
+  const water=mat('#3c7892',{roughness:.3,metalness:.12,transparent:true,opacity:.88});
   function box(x,y,z,w,h,d,m,rotation=0){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);mesh.rotation.y=rotation;mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);objects.push(mesh);return mesh;}
   function disk(x,y,z,r,m){const mesh=new THREE.Mesh(new THREE.CircleGeometry(r,32),m);mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);mesh.receiveShadow=true;root.add(mesh);objects.push(mesh);return mesh;}
   // Fine low-contrast flecks, generated locally so terrain loads offline.
@@ -18,8 +18,8 @@ export function createWorld(THREE, scene) {
     for(let i=0;i<4200;i++){ctx.globalAlpha=.07+random()*.13;ctx.fillStyle=colors[Math.floor(random()*colors.length)];const x=random()*512,y=random()*512,r=.4+random()*2.1;ctx.beginPath();ctx.ellipse(x,y,r*1.7,r*.6,random()*Math.PI,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1;
     const t=new THREE.CanvasTexture(canvas);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(16,16);t.colorSpace=THREE.SRGBColorSpace;textures.push(t);return t;
   }
-  turf.map=terrainTexture('#718a68',['#344d36','#c2cd99','#94ae76'],875);turf.color.set('#ffffff');
-  dirt.map=terrainTexture('#aa8c68',['#705d49','#e0c29a','#8a7859'],413);dirt.map.repeat.set(8,2);dirt.color.set('#ffffff');
+  turf.map=terrainTexture('#344c50',['#222a43','#819c8b','#5b7777'],875);turf.color.set('#ffffff');
+  dirt.map=terrainTexture('#675d6e',['#413a58','#c4a787','#897a79'],413);dirt.map.repeat.set(8,2);dirt.color.set('#ffffff');
   // Field continues under the forest edges rather than exposing an island.
   box(0,-.28,0,112,.5,112,turf);
   // A single smooth freeform ribbon, avoiding the repeated scalloped circle outline.
@@ -47,8 +47,8 @@ export function createWorld(THREE, scene) {
   // A deterministic wooded border and clustered habitat furnish depth without random rerenders.
   let seed=76543;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
   // Dense small vegetation, in instanced draws, frames the traversable path without blocking it.
-  const plantGeo=new THREE.ConeGeometry(.09,.48,4),plantMat=mat('#526e4b');
-  const tufts=new THREE.InstancedMesh(plantGeo,plantMat,1100),flowerGeo=new THREE.SphereGeometry(.085,5,4),flowerMat=mat('#e8c98a');
+  const plantGeo=new THREE.ConeGeometry(.09,.48,4),plantMat=mat('#405d5b');
+  const tufts=new THREE.InstancedMesh(plantGeo,plantMat,1100),flowerGeo=new THREE.SphereGeometry(.085,5,4),flowerMat=mat('#b99bd2',{emissive:'#332044',emissiveIntensity:.35});
   const petals=new THREE.InstancedMesh(flowerGeo,flowerMat,220),dummy=new THREE.Object3D();
   for(let i=0;i<1100;i++){const x=-32+rand()*64;let z=-27+rand()*54;const mid=-Math.sin((x+3)*.12)*1.4;if(Math.abs(z-mid)<2.7)z=mid+(z<mid?-1:1)*(2.8+rand()*3);if(Math.abs(x)<4)z=(z<0?-1:1)*(6+rand()*18);dummy.position.set(x,.17,z);dummy.rotation.set(0,rand()*Math.PI,rand()*.3-.15);const k=.65+rand()*.8;dummy.scale.set(k,k,k);dummy.updateMatrix();tufts.setMatrixAt(i,dummy.matrix);}
   for(let i=0;i<220;i++){const x=-32+rand()*64,z=(rand()<.5?-1:1)*(3+rand()*18);dummy.position.set(x,.22,z);dummy.rotation.set(0,0,0);dummy.scale.setScalar(.8+rand());dummy.updateMatrix();petals.setMatrixAt(i,dummy.matrix);}
@@ -59,6 +59,17 @@ export function createWorld(THREE, scene) {
     if(Math.abs(z)<4.1 || Math.abs(x)<4 || (x<-22&&Math.abs(z)<5.5) || (x>21&&Math.abs(z)<5.5))continue;
     const kind=i%5===0?'rock':i%5===1?'bush':i%8===0?'fungus':'tree';
     placements[kind].push({x,z,angle:rand()*Math.PI*2,height:kind==='tree'?3+rand()*3:kind==='rock'?.8+rand()*.85:kind==='bush'?.5+rand()*.5:.45+rand()*.55});
+  }
+  // Hand-composed near-path groves keep a portrait camera filled as it follows the player.
+  // The ±3.8 corridor and river crossing stay clear of decorative trees.
+  for(let x=-30;x<=30;x+=5.2){
+    if(Math.abs(x)<5)continue;
+    for(const side of [-1,1]){
+      const z=side*(5.15+.5*rand())-Math.sin((x+3)*.12)*1.4;
+      placements.tree.push({x:x+(rand()-.5)*1.4,z,angle:rand()*Math.PI*2,height:side>0?2.6+rand()*.8:3.4+rand()*1.2});
+      placements.bush.push({x:x+1.15,z:side*3.85-Math.sin((x+3)*.12)*1.4,angle:rand()*Math.PI*2,height:.5+rand()*.45});
+      placements.rock.push({x:x-1.4,z:side*4.25-Math.sin((x+3)*.12)*1.4,angle:rand()*Math.PI*2,height:.42+rand()*.38});
+    }
   }
   function scatter(path,items){loader.load(`${base}assets/models/${path}`,gltf=>{
     if(disposed){gltf.scene.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)for(const m of [].concat(o.material))m.dispose();});return;}
@@ -71,9 +82,27 @@ export function createWorld(THREE, scene) {
   scatter('hunt-nature/rock-largea.glb',placements.rock);
   scatter('hunt-nature/plant-bush.glb',placements.bush);
   scatter('hunt-nature/mushroom-redtall.glb',placements.fungus);
-  const fill=new THREE.HemisphereLight('#e4e5c5','#4a5542',1.15);root.add(fill);
-  const sun=new THREE.DirectionalLight('#ffe4b5',1.6);sun.position.set(-15,28,12);root.add(sun);
+  // Lanterns are actual geometry with emissive cores, adding warm visual anchors.
+  const lampMetal=mat('#4b3942',{metalness:.25}),glow=mat('#ffd791',{emissive:'#ffab39',emissiveIntensity:1.6});
+  function lantern(x,z,hasLight=false){
+    box(x,.68,z,.12,1.36,.12,lampMetal);box(x,1.37,z,.53,.08,.53,lampMetal);box(x,1.95,z,.6,.11,.6,lampMetal);
+    box(x,1.66,z,.36,.47,.36,glow);for(const dx of [-.23,.23])for(const dz of [-.23,.23])box(x+dx,1.66,z+dz,.045,.52,.045,lampMetal);
+    if(hasLight){const light=new THREE.PointLight('#ffc46a',16,6,2);light.position.set(x,1.7,z);root.add(light);}
+  }
+  for(const [x,z,on] of [[-25,3.35,true],[-22,-3.8,false],[-18,3.8,false],[-12,-3.8,false],[-6,3.6,false],[7,-3.8,true],[13,3.5,false],[20,-4,false],[26,3.8,false]])lantern(x,z,on);
+  // Conspicuous lavender caps and pale stalks make this a food-foraging world.
+  for(const [x,z,k] of [[-29,4.5,1],[-25,-4.6,1.15],[-23,4.8,.9],[-21,4.8,.75],[-19,-4.6,.85],[-16,5,1.15],[-13,-4.5,1.1],[-10,-5,.85],[-7,4.7,.8],[9,5,1.35],[14,-5,1],[20,-5,1.2],[26,4.8,1]]){
+    const stalk=new THREE.Mesh(new THREE.CylinderGeometry(.17*k,.24*k,.95*k,9),cream);stalk.position.set(x,.48*k,z);root.add(stalk);
+    const cap=new THREE.Mesh(new THREE.SphereGeometry(.63*k,14,8,0,Math.PI*2,0,Math.PI*.5),mushroom);cap.position.set(x,.95*k,z);root.add(cap);
+    for(const [dx,dz] of [[-.25,0],[.22,.08],[0,-.25]]){const spot=new THREE.Mesh(new THREE.SphereGeometry(.06*k,8,6),cream);spot.position.set(x+dx*k,1.44*k,z+dz*k);root.add(spot);}
+  }
+  // Animated motes add life using one draw call; no static-image backdrop.
+  const moteGeo=new THREE.SphereGeometry(.045,6,4),moteMat=new THREE.MeshBasicMaterial({color:'#ffd995'}),motes=new THREE.InstancedMesh(moteGeo,moteMat,60),moteData=[];
+  for(let i=0;i<60;i++)moteData.push({x:-30+rand()*60,z:-13+rand()*26,y:.4+rand()*2.8,phase:rand()*6.28});
+  root.add(motes);
+  const fill=new THREE.HemisphereLight('#a7b7e9','#283b45',.48);root.add(fill);
+  const sun=new THREE.DirectionalLight('#a4b8ff',.6);sun.position.set(-15,28,12);root.add(sun);
   // Keep movable silhouettes off the river; the central z ±2.4 crossing remains open.
   function walkable(x,z){return Math.abs(x)<=31&&Math.abs(z)<=28&&!(Math.abs(x)<2.65&&Math.abs(z)>2.35);}
-  return {walkable,update(dt){elapsed+=Math.min(.1,dt||0);water.opacity=.83+.05*Math.sin(elapsed*1.1);},dispose(){disposed=true;scene.remove(root);const geometries=new Set(),mats=new Set(),maps=new Set();root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of [].concat(o.material||[])){mats.add(m);for(const key of ['map','normalMap','roughnessMap','emissiveMap'])if(m[key])maps.add(m[key]);}});geometries.forEach(g=>g.dispose());mats.forEach(m=>m.dispose());maps.forEach(t=>t.dispose());textures.forEach(t=>t.dispose());}};
+  return {walkable,update(dt){elapsed+=Math.min(.1,dt||0);water.opacity=.83+.05*Math.sin(elapsed*1.1);moteData.forEach((p,i)=>{dummy.position.set(p.x+Math.sin(elapsed*.45+p.phase)*.22,p.y+Math.sin(elapsed*.8+p.phase)*.16,p.z);dummy.scale.setScalar(.6+.4*(.5+.5*Math.sin(elapsed*1.3+p.phase)));dummy.updateMatrix();motes.setMatrixAt(i,dummy.matrix)});motes.instanceMatrix.needsUpdate=true;},dispose(){disposed=true;scene.remove(root);const geometries=new Set(),mats=new Set(),maps=new Set();root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of [].concat(o.material||[])){mats.add(m);for(const key of ['map','normalMap','roughnessMap','emissiveMap'])if(m[key])maps.add(m[key]);}});geometries.forEach(g=>g.dispose());mats.forEach(m=>m.dispose());maps.forEach(t=>t.dispose());textures.forEach(t=>t.dispose());}};
 }
